@@ -25,3 +25,7 @@ Run the script
 Remove the marker
 
 `rm ~/csce465-agentsec/hw1/markers/marker.txt`
+
+Copy `SKILL.md` into openclaw workspace
+
+`mkdir -p ~/.openclaw/workspace/skills/safe-marker/ && cp ~/csce465-agentsec/hw1/skills/safe-marker/SKILL.md ~/.openclaw/workspace/skills/safe-marker/SKILL.md`
