@@ -6,6 +6,22 @@
 
 `node tamu-shim.mjs`
 
+## Task 1
+
 ### Run Command
 
 `openclaw agent --agent main "<prompt>"`
+
+## Task 2
+
+Make `safe_marker.sh` executable.
+
+`chmod +x ~/csce465-agentsec/hw1/bin/safe_marker.sh`
+
+Run the script
+
+`~/csce465-agentsec/hw1/bin/safe_marker.sh course-marker`
+
+Remove the marker
+
+`rm ~/csce465-agentsec/hw1/markers/marker.txt`
