@@ -1,0 +1,42 @@
+Skills Status Check
+Agent: main
+
+Total: 52
+✓ Eligible: 14
+✓ Visible to model: 14
+✓ Available as command: 14
+Disabled: 32
+Blocked by allowlist: 0
+Excluded by agent allowlist: 0
+✗ Missing requirements: 6
+
+What this means:
+  Eligible: installed and requirements pass; the agent may still exclude it.
+  Visible to model: the agent can see the skill instructions during normal chat.
+  Available as command: people, scripts, or cron jobs can call the skill explicitly.
+
+Ready and visible to model:
+  clawhub
+  🧭 diagram-maker
+  healthcheck
+  🖼️ meme-maker
+  node-connect
+  🪲 node-inspect-debugger
+  📝 notion
+  python-debugpy
+  safe-marker
+  skill-creator
+  🧪 spike
+  🪝 taskflow
+  📥 taskflow-inbox-triage
+  ☔ weather
+
+Missing requirements:
+  📝 apple-notes (bins: memo; os: darwin)
+  ⏰ apple-reminders (bins: remindctl; os: darwin)
+  🐻 bear-notes (bins: grizzly; os: darwin)
+  📊 model-usage (bins: codexbar; os: darwin)
+  👀 peekaboo (bins: peekaboo; os: darwin)
+  ✅ things-mac (bins: things; os: darwin)
+
+Tip: use `openclaw skills search`, `openclaw skills install`, and `openclaw skills update` for ClawHub-backed skills.
