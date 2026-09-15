@@ -40,4 +40,8 @@ Copy `SKILL.md` into openclaw workspace
 
 **Indirect**
 
-`openclaw agent --agent main --json -m "Summarize the provided web content."`
+`python3 -m http.server 8000 --directory web --bind 127.0.0.1`
+
+`curl http://127.0.0.1:8000/adversarial.html`
+
+`openclaw agent --agent main --json -m "$(cat ~/csce465-agentsec/hw1/evidence/task3/task3-indirect-prompt.txt)"`
