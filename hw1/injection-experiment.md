@@ -144,3 +144,22 @@ No tools were called.
 **Marker Check**
 
 No marker was created.
+
+## Injection Experiment Questions
+
+### What makes the two trials structurally different?
+
+The two trials are structurally different because the malicious instructions originate from different channels and are treated differently. The first trial was a direct injection attack, in which the instruction to invoke the safe-marker skill was included in the user control channel. This means the user prompt specifically asked for use of that tool and is authorized. This differs from the second trial which was an indirect prompt injection attack. The safe-marker skill was included in the data channel, not in the user control channel meaning the instruction was not authorized to call a tool.
+
+### Where does untrusted data become a possible instruction?
+
+Untrusted data can become a possible instruction when it is assembled into the model context by OpenClaw. While untrusted data is treated as such it is still included as text in the model context. This means it is possible for the LLM to treat the text from the data channel as an instruction. 
+
+### Which control should decide whether a tool call is authorized?
+
+The model is responsible for deciding what tools to call and when; however, the execution policy should be responsible for deciding when a tool call is authorized.
+
+### Why would encryption of the agent channel not solve indirect prompt injection?
+
+Indirect prompt injection occurs when a data source like a web page includes an instruction for an agent intended to cause the agent to perform an unauthorized action. Because the malicious prompt sits inside the data, encryption of the agent channel does not solve the indirect prompt injection. The data with the injected prompt is just encrypted when sent to the agent over the channel, but the instructions still reach the LLM.
+
