@@ -16,31 +16,6 @@ def decrypt(key: bytes, initial_value: bytes, ciphertext: bytes) -> bytes:
     return plaintext
 
 
-def relay(ciphertext: bytes) -> bytes:
-    print(f"Received Ciphertext: {ciphertext.hex()}")
-    modified = bytearray(ciphertext)
-
-    offset = len(b'{"action":"')
-    original = b"READ"
-    desired = b"PWND"
-
-    delta = bytes(a ^ b for a, b in zip(original, desired))
-
-    for i, d in enumerate(delta):
-        modified[offset + i] ^= d
-
-    def fmt(data: bytes) -> str:
-        return " ".join(f"{b:02x}" for b in data)
-
-    print(f"\nXOR Relation\n{"-" * 20}")
-    print(f"Original bytes:   {fmt(original)}")
-    print(f"Desired bytes:    {fmt(desired)}")
-    print(f"XOR difference:   {fmt(delta)}")
-
-    print(f"\nModified Ciphertext: {modified.hex()}")
-    return bytes(modified)
-
-
 class Sender:
     def __init__(self, key: bytes, initial_value: bytes):
         self.key = key
@@ -69,6 +44,36 @@ class Receiver:
         print(f"Decrypted Message:    {plaintext.decode()}")
 
 
+def relay(ciphertext: bytes) -> bytes:
+    print(f"Received Ciphertext: {ciphertext.hex()}")
+    modified = bytearray(ciphertext)
+
+    offset = len(b'{"action":"')
+    original = b"READ"
+    desired = b"PWND"
+
+    delta = bytes(a ^ b for a, b in zip(original, desired))
+
+    for i, d in enumerate(delta):
+        modified[offset + i] ^= d
+
+    def fmt(data: bytes) -> str:
+        return " ".join(f"{b:02x}" for b in data)
+
+    print(f"\nXOR Relation ({original.decode()} --> {desired.decode()}):")
+    print(f"  Original bytes:   {fmt(original)}")
+    print(f"  Desired bytes:    {fmt(desired)}")
+    print(f"  XOR difference:   {fmt(delta)}")
+
+    print(f"\nModified Ciphertext: {modified.hex()}")
+    return bytes(modified)
+
+
+def replay(ciphertext: bytes) -> bytes:
+    print(f"Replaying Ciphertext: {ciphertext.hex()}")
+    return ciphertext
+
+
 def main():
     key = os.urandom(32)
     initial_value = os.urandom(16)
@@ -78,14 +83,27 @@ def main():
 
     print(f"\nSender and Receiver initialized with same key and initial value.")
 
-    print(f"\nSENDER\n{"=" * 40}")
+    # RELAY
+    print(f"\n{"=" * 40}\nMessage Integrity Demonstration\n{"=" * 40}")
+
+    print(f"SENDER\n{"-" * 20}")
     ciphertext = sender.send()
 
-    print(f"\nRELAY\n{"=" * 40}")
+    print(f"\nRELAY\n{"-" * 20}")
     modified_ciphertext = relay(ciphertext)
 
-    print(f"\nRECEIVER\n{"=" * 40}")
+    print(f"\nRECEIVER\n{"-" * 20}")
     receiver.receive(modified_ciphertext)
+
+    # REPLAY
+    print(f"\n{"=" * 40}\nReplay Demonstration\n{"=" * 40}")
+
+    print(f"SENDER\n{"-" * 20}")
+    ciphertext = sender.send()
+
+    print(f"\nRECEIVER\n{"-" * 20}")
+    receiver.receive(ciphertext)
+    receiver.receive(ciphertext)
 
     print("")
 
