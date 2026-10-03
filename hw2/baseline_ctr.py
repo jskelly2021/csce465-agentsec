@@ -21,7 +21,6 @@ def relay(ciphertext: bytes) -> bytes:
     modified = bytearray(ciphertext)
 
     offset = len(b'{"action":"')
-
     original = b"READ"
     desired = b"PWND"
 
@@ -30,6 +29,15 @@ def relay(ciphertext: bytes) -> bytes:
     for i, d in enumerate(delta):
         modified[offset + i] ^= d
 
+    def fmt(data: bytes) -> str:
+        return " ".join(f"{b:02x}" for b in data)
+
+    print(f"\nXOR Relation\n{"-" * 20}")
+    print(f"Original bytes:   {fmt(original)}")
+    print(f"Desired bytes:    {fmt(desired)}")
+    print(f"XOR difference:   {fmt(delta)}")
+
+    print(f"\nModified Ciphertext: {modified.hex()}")
     return bytes(modified)
 
 
@@ -40,11 +48,11 @@ class Sender:
         self.message = b'{"action":"READ","path":"notes.txt"}'
 
     def send(self) -> bytes:
-        print(f"Original Plaintext Message: {self.message.decode()}")
+        print(f"Plaintext Message:  {self.message.decode()}")
 
         ciphertext = encrypt(self.key, self.iv, self.message)
 
-        print(f"Encrypted Message: {ciphertext.hex()}")
+        print(f"Encrypted Message:  {ciphertext.hex()}")
 
         return ciphertext
 
@@ -55,10 +63,10 @@ class Receiver:
         self.iv = initial_value
 
     def receive(self, ciphertext: bytes) -> None:
-        print(f"Received Ciphertext: {ciphertext.hex()}")
+        print(f"Received Ciphertext:  {ciphertext.hex()}")
 
         plaintext = decrypt(self.key, self.iv, ciphertext)
-        print(f"Decrypted Message: {plaintext.decode()}")
+        print(f"Decrypted Message:    {plaintext.decode()}")
 
 
 def main():
