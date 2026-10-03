@@ -26,6 +26,14 @@ openssl genpkey -genparam -algorithm DH -pkeyopt group:ffdhe3072 -out ffdhe3072.
 openssl dhparam -in ffdhe3072.pem -text -noout | head -3
 ```
 
+## Task 1
+
+Run `baseline_ctr.py` experiment.
+
+```sh
+python baseline_ctr.py
+```
+
 ## Run Tests
 
 TODO
