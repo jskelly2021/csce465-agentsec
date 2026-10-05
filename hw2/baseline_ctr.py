@@ -79,24 +79,24 @@ def main():
     print(f"\nSender and Receiver initialized with same key and initial value.")
 
     # RELAY
-    print(f"\n{"=" * 40}\nMessage Integrity Demonstration\n{"=" * 40}")
+    print(f"\n{'=' * 40}\nMessage Integrity Demonstration\n{'=' * 40}")
 
-    print(f"SENDER\n{"-" * 20}")
+    print(f"SENDER\n{'-' * 20}")
     ciphertext = sender.send()
 
-    print(f"\nRELAY\n{"-" * 20}")
+    print(f"\nRELAY\n{'-' * 20}")
     modified_ciphertext = relay(ciphertext)
 
-    print(f"\nRECEIVER\n{"-" * 20}")
+    print(f"\nRECEIVER\n{'-' * 20}")
     receiver.receive(modified_ciphertext)
 
     # REPLAY
-    print(f"\n{"=" * 40}\nReplay Demonstration\n{"=" * 40}")
+    print(f"\n{'=' * 40}\nReplay Demonstration\n{'=' * 40}")
 
-    print(f"SENDER\n{"-" * 20}")
+    print(f"SENDER\n{'-' * 20}")
     ciphertext = sender.send()
 
-    print(f"\nRECEIVER\n{"-" * 20}")
+    print(f"\nRECEIVER\n{'-' * 20}")
     receiver.receive(ciphertext)
     receiver.receive(ciphertext)
 
