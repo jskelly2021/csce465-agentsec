@@ -1,3 +1,5 @@
+import os
+from dataclasses import dataclass
 from pathlib import Path
 
 from cryptography.hazmat.primitives import serialization
@@ -46,6 +48,13 @@ class Session:
         self.transcript_hash = None
 
 
+@dataclass
+class HandshakeState:
+    dh_private_key: dh.DHPrivateKey
+    dh_public_key: dh.DHPublicKey
+    nonce: bytes
+
+
 class Party:
     def __init__(
         self,
@@ -60,6 +69,22 @@ class Party:
         self.signing_key = signing_key
         self.public_signing_key = signing_key.public_key()
         self.trusted_peers=trusted_peers,
+
+    def begin_handshake(self) -> HandshakeState:
+        """
+        Generate a HandshakeState containing the fresh DH key pair, and random 16 byte nonce.
+        """
+        dh_private_key = self.dh_parameters.generate_private_key()
+        dh_public_key = dh_private_key.public_key()
+        nonce = os.urandom(16)
+
+        print(f"{f'[{self.identity}]':<9} Generated DH key pair and nonce for handshake")
+
+        return HandshakeState(
+            dh_private_key=dh_private_key,
+            dh_public_key=dh_public_key,
+            nonce=nonce
+        )
 
 
 def load_dh_parameters(path: Path) -> dh.DHParameters:
@@ -89,6 +114,9 @@ def handshake(gateway: Party, node: Party) -> tuple[Session, Session]:
     """
     Perform the handshake between the gateway and node. returns the established sessions for each party.
     """
+    gateway_state = gateway.begin_handshake()
+    node_state = node.begin_handshake()
+
     gateway_session = Session()
     node_session = Session()
 
@@ -98,12 +126,12 @@ def handshake(gateway: Party, node: Party) -> tuple[Session, Session]:
 def main():
     dh_parameters = load_dh_parameters(GROUP_FILE)
 
-    print(f"Loaded DH parameters from {GROUP_FILE} (group ID: {GROUP_ID})")
+    print(f"[*] Loaded DH parameters from {GROUP_FILE} (group ID: {GROUP_ID})")
 
     gateway_signing_key = generate_rsa_signing_key()
     node_signing_key = generate_rsa_signing_key()
 
-    print("Generated RSA signing keys for Gateway and Node")
+    print(f"[*] Generated RSA signing keys for Gateway and Node")
 
     gateway = Party(
         identity="gateway",
@@ -123,9 +151,9 @@ def main():
         },
     )
 
-    print("Initialized Gateway and Node")
+    print(f"[*] Initialized Gateway and Node")
 
-    print(f"{'=' * 40}")
+    print(f"\n{'=' * 40}")
     print(f"HANDSHAKE SIMULATION")
     print(f"{'=' * 40}")
 
