@@ -8,6 +8,60 @@ GROUP_FILE = Path("ffdhe3072.pem")
 GROUP_ID = "ffdhe3072"
 
 
+class Transcript:
+    def __init__(self,
+        protocol: str,
+        group: str,
+        gateway_identity: str,
+        node_identity: str,
+        gateway_DH_public: bytes,
+        node_DH_public: bytes,
+        gateway_nonce: bytes,
+        node_nonce: bytes    
+    ):
+        self.protocol = protocol
+        self.group = group
+        self.gateway_identity = gateway_identity
+        self.node_identity = node_identity
+        self.gateway_DH_public = gateway_DH_public
+        self.node_DH_public = node_DH_public
+        self.gateway_nonce = gateway_nonce
+        self.node_nonce = node_nonce
+
+    def encode(self) -> bytes:
+        """
+        Encodes the transcript as its fields concatenated together, each preceded by its length as a 4-byte big-endian integer.
+        """
+        pass
+
+    def hash(self) -> bytes:
+        pass
+
+
+class Session:
+    def __init__(self):
+        self.session_id = None
+        self.peer_identity = None
+        self.transcript = None
+        self.transcript_hash = None
+
+
+class Party:
+    def __init__(
+        self,
+        identity: str,
+        dh_parameters: dh.DHParameters,
+        signing_key: rsa.RSAPrivateKey,
+        trusted_peers: dict[str, rsa.RSAPublicKey],
+    ):
+        self.identity = identity
+        self.group_id = GROUP_ID
+        self.dh_parameters = dh_parameters
+        self.signing_key = signing_key
+        self.public_signing_key = signing_key.public_key()
+        self.trusted_peers=trusted_peers,
+
+
 def load_dh_parameters(path: Path) -> dh.DHParameters:
     """
     Load the finite-field DH parameters from the PEM group file.
@@ -31,45 +85,17 @@ def generate_rsa_signing_key() -> rsa.RSAPrivateKey:
     )
 
 
-class Gateway:
-    def __init__(
-        self,
-        dh_parameters: dh.DHParameters,
-        signing_key: rsa.RSAPrivateKey,
-        trusted_peers: dict[str, rsa.RSAPublicKey],
-    ):
-        self.identity = "gateway"
-        self.group_id = GROUP_ID
+def handshake(gateway: Party, node: Party) -> tuple[Session, Session]:
+    """
+    Perform the handshake between the gateway and node. returns the established sessions for each party.
+    """
+    gateway_session = Session()
+    node_session = Session()
 
-        self.dh_parameters = dh_parameters
-
-        self.signing_key = signing_key
-        self.public_signing_key = signing_key.public_key()
-        
-        self.trusted_peers=trusted_peers,
-
-
-class Node:
-    def __init__(
-        self,
-        dh_parameters: dh.DHParameters,
-        signing_key: rsa.RSAPrivateKey,
-        trusted_peers: dict[str, rsa.RSAPublicKey],
-    ):
-        self.identity = "node"
-        self.group_id = GROUP_ID
-
-        self.dh_parameters = dh_parameters
-
-        self.signing_key = signing_key
-        self.public_signing_key = signing_key.public_key()
-
-        self.trusted_peers = trusted_peers
+    return gateway_session, node_session
 
 
 def main():
-    print(f"\n{'=' * 40}\nINITIALIZING HANDSHAKE SIMULATION\n{'=' * 40}")
-
     dh_parameters = load_dh_parameters(GROUP_FILE)
 
     print(f"Loaded DH parameters from {GROUP_FILE} (group ID: {GROUP_ID})")
@@ -77,9 +103,10 @@ def main():
     gateway_signing_key = generate_rsa_signing_key()
     node_signing_key = generate_rsa_signing_key()
 
-    print("Gateway and Node signing keys generated")
+    print("Generated RSA signing keys for Gateway and Node")
 
-    gateway = Gateway(
+    gateway = Party(
+        identity="gateway",
         dh_parameters=dh_parameters,
         signing_key=gateway_signing_key,
         trusted_peers={
@@ -87,7 +114,8 @@ def main():
         },
     )
 
-    node = Node(
+    node = Party(
+        identity="node",
         dh_parameters=dh_parameters,
         signing_key=node_signing_key,
         trusted_peers={
@@ -95,7 +123,13 @@ def main():
         },
     )
 
-    print("Gateway and Node initialized")
+    print("Initialized Gateway and Node")
+
+    print(f"{'=' * 40}")
+    print(f"HANDSHAKE SIMULATION")
+    print(f"{'=' * 40}")
+
+    gateway_session, node_session = handshake(gateway, node)
 
     print("")
 
