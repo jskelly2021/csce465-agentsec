@@ -69,11 +69,6 @@ def relay(ciphertext: bytes) -> bytes:
     return bytes(modified)
 
 
-def replay(ciphertext: bytes) -> bytes:
-    print(f"Replaying Ciphertext: {ciphertext.hex()}")
-    return ciphertext
-
-
 def main():
     key = os.urandom(32)
     initial_value = os.urandom(16)
