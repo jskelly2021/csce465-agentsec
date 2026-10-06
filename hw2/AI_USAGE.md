@@ -45,3 +45,29 @@ I compared the proposed design against the assignment requirements and will veri
 
 **One error, limitation, or rejected suggestion:**
 I initially interpreted replay as forwarding the original and modified ciphertexts. The AI clarified that replay requires sending the exact same ciphertext more than once, and I corrected my design accordingly.
+
+## Task 2 — Authenticated Diffie–Hellman Handshake
+
+**Tool/model and date:**
+ChatGPT, GPT-5.6 Sol, Oct 4–5
+
+**Purpose:**
+Clarify the Task 2 requirements and design an authenticated Diffie–Hellman handshake between a simulated gateway and node. I also used AI to understand the canonical transcript, RSA-PSS authentication, ephemeral DH key exchange, session key derivation, and the responsibilities of the Gateway, Node, and Session objects. Generate code for task 2 completion.
+
+**AI Conversation Log files:**
+ai_logs/task2_handshake_chat.md  
+ai_logs/csce465_hw2_task2_chat.md  
+ai_logs/task2-handshake-chat.md  
+ai_logs/task2_handshake_chat_export.md
+
+**What I used:**
+I used explanations and code guidance for loading the `ffdhe3072` parameters, generating ephemeral DH keys and nonces, representing the Gateway and Node, constructing and hashing the length-prefixed transcript, signing and verifying `role || SHA-256(transcript)` with RSA-PSS, computing the DH shared secret, and deriving the required directional encryption/MAC keys and session identifier. I also used clarification about which values belong to each party internally versus which values represent exchanged handshake data.
+
+**What I changed:**
+I adapted the suggested structure and examples to my own `handshake.py` implementation, including my own Party/Gateway/Node and Session organization, helper functions, naming, validation, and program output. I reviewed the required transcript fields and assignment-specific KDF against the homework specification rather than copying an alternative protocol design.
+
+**How I tested it:**
+I ran the handshake in the course VM and checked that both parties construct the same transcript hash, independently compute the same Diffie–Hellman shared secret, verify each other's RSA-PSS signatures, and derive matching session keys and session identifier. I also used invalid or modified handshake values to verify that authentication failures are rejected as required.
+
+**One error, limitation, or rejected suggestion:**
+I initially thought Task 2 required reimplementing the Diffie–Hellman setup itself. The AI clarified that the maintained cryptography library should perform the DH arithmetic and that my responsibility is to implement the authenticated handshake protocol around it, including the transcript, signatures, identity checks, and key derivation.

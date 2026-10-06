@@ -36,6 +36,14 @@ Run `baseline_ctr.py` experiment.
 python baseline_ctr.py
 ```
 
+## Task 2
+
+Run `handshake.py` experiment.
+
+```sh
+python handshake.py
+```
+
 ## Run Tests
 
 TODO
