@@ -8,6 +8,7 @@ from secure_record import (
     IV_SIZE,
 )
 
+
 def test_modified_ciphertext_rejected(sessions):
     gateway_session, node_session = sessions
 
