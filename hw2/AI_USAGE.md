@@ -9,7 +9,7 @@ ChatGPT, GPT-5.6, Sep 24
 Break the assignment into tasks and create soft deadlines to stay on track.
 
 **AI Conversation Log files:**
-ai_logs/create_work_plan.md
+ai_logs/hw_work_plan.md
 
 **What I used:**
 The suggested workplan.
@@ -55,10 +55,10 @@ ChatGPT, GPT-5.6 Sol, Oct 4–5
 Clarify the Task 2 requirements and design an authenticated Diffie–Hellman handshake between a simulated gateway and node. I also used AI to understand the canonical transcript, RSA-PSS authentication, ephemeral DH key exchange, session key derivation, and the responsibilities of the Gateway, Node, and Session objects. Generate code for task 2 completion.
 
 **AI Conversation Log files:**
-ai_logs/task2_handshake_chat.md  
-ai_logs/csce465_hw2_task2_chat.md  
-ai_logs/task2-handshake-chat.md  
-ai_logs/task2_handshake_chat_export.md
+ai_logs/task2_plan.md  
+ai_logs/task2_understanding.md  
+ai_logs/task2_code_gen.md  
+ai_logs/task2_bug_review.md
 
 **What I used:**
 I used explanations and code guidance for loading the `ffdhe3072` parameters, generating ephemeral DH keys and nonces, representing the Gateway and Node, constructing and hashing the length-prefixed transcript, signing and verifying `role || SHA-256(transcript)` with RSA-PSS, computing the DH shared secret, and deriving the required directional encryption/MAC keys and session identifier. I also used clarification about which values belong to each party internally versus which values represent exchanged handshake data.
