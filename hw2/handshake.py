@@ -22,7 +22,6 @@ NODE_IDENTITY = "node"
 NODE_ROLE = "node"
 
 
-
 @dataclass(frozen=True)
 class SessionKeys:
     g2n_enc: bytes
@@ -180,6 +179,7 @@ class Party:
         self.dh_public_key = None
         self.nonce = None
         self.shared_secret = None
+        self.th = None
 
     def hello(self) -> Hello:
         """
@@ -190,17 +190,26 @@ class Party:
         self.dh_public_key = self.dh_private_key.public_key()
         self.nonce = os.urandom(16)
 
+        print(f"[*] {self.identity} generated fresh DH key pair and 16-byte nonce")\
+
         return Hello(
             identity=self.identity,
             dh_public_key=self.dh_public_key,
             nonce=self.nonce
         )
 
-    def sign(self, transcript_hash: bytes) -> bytes:
+    def hash_transcript(self, transcript: bytes) -> bytes:
+        self.th = hashlib.sha256(transcript).digest()
+        return self.th
+
+    def sign(self) -> bytes:
         """
         Sign role + transcript hash.
         """
-        message = self.role.encode() + transcript_hash
+        if self.th is None:
+            raise ValueError("Transcript hash has not been computed")
+
+        message = self.role.encode() + self.th
 
         signature = self.signing_key.sign(
             message,
@@ -211,20 +220,24 @@ class Party:
             hashes.SHA256(),
         )
 
+        print(f"[*] {self.identity} signed transcript hash")
+
         return signature
 
     def verify_signature(
         self,
         peer_identity: str,
-        transcript_hash: bytes,
         signature: bytes,
     ) -> None:
+        if self.th is None:
+            raise ValueError("Transcript hash has not been computed")
+
         if peer_identity not in self.trusted_peers:
             raise ValueError(f"Unexpected peer identity: {peer_identity}")
 
         peer_public_key = self.trusted_peers[peer_identity]
 
-        message = self.peer_role.encode() + transcript_hash
+        message = self.peer_role.encode() + self.th
 
         peer_public_key.verify(
             signature,
@@ -236,17 +249,23 @@ class Party:
             hashes.SHA256(),
         )
 
+        print(f"[*] {self.identity} verified Gateway RSA-PSS signature")
+
 
     def derive_session_keys(
         self,
         peer_dh_public_key: dh.DHPublicKey,
-        transcript_hash: bytes,
     ) -> SessionKeys:
         """
         Compute the DH shared secret and derive the session keys.
         """
+        if self.dh_private_key is None:
+            raise ValueError("Handshake has not been initialized")
 
-        if len(transcript_hash) != 32:
+        if self.th is None:
+            raise ValueError("Transcript hash has not been computed")
+
+        if len(self.th) != 32:
             raise ValueError("Transcript hash must be 32 bytes")
 
         shared_secret = self.dh_private_key.exchange(peer_dh_public_key)
@@ -256,7 +275,9 @@ class Party:
 
         z = shared_secret.rjust(DH_VALUE_SIZE, b"\x00")
 
-        keys = kdf(z, transcript_hash)
+        keys = kdf(z, self.th)
+
+        print(f"[*] {self.identity} derived session keys")
 
         return keys
 
@@ -270,55 +291,55 @@ def handshake(gateway: Party, node: Party) -> tuple[Session, Session]:
     print(f"{'=' * 60}")
 
     gateway_hello = gateway.hello()
-    print(f"[*] Gateway generated fresh DH key pair and 16-byte nonce")
-
     node_hello = node.hello()
-    print(f"[*] Node generated fresh DH key pair and 16-byte nonce")
 
-    transcript = build_transcript(
-        gateway_hello.identity,
+    gateway_transcript = build_transcript(
+        gateway.identity,
         node_hello.identity,
-        gateway_hello.dh_public_key,
+        gateway.dh_public_key,
         node_hello.dh_public_key,
-        gateway_hello.nonce,
-        node_hello.nonce,
+        gateway.nonce,
+        node_hello.nonce
     )
 
-    th = hashlib.sha256(transcript).digest()
+    print(f"[*] {GATEWAY_IDENTITY} constructed transcript")
 
-    print(f"[*] Constructed transcript and computed transcript hash")
+    node_transcript = build_transcript(
+        gateway_hello.identity,
+        node.identity,
+        gateway_hello.dh_public_key,
+        node.dh_public_key,
+        gateway_hello.nonce,
+        node.nonce
+    )
+
+    print(f"[*] {NODE_IDENTITY} constructed transcript")
+
+    gateway_th = gateway.hash_transcript(gateway_transcript)
+    node_th = node.hash_transcript(node_transcript)
+
+    assert gateway_th == node_th
+
+    print(f"[*] Transcript hashes match")
     
-    gateway_signature = gateway.sign(transcript_hash=th)
-    print(f"[*] Gateway signed transcript hash")
-
-    node_signature = node.sign(transcript_hash=th)
-    print(f"[*] Node signed transcript hash")
+    gateway_signature = gateway.sign()
+    node_signature = node.sign()
 
     gateway.verify_signature(
         peer_identity=node_hello.identity,
-        transcript_hash=th,
         signature=node_signature,
     )
-    print(f"[*] Gateway verified Gateway RSA-PSS signature")
-
     node.verify_signature(
         peer_identity=gateway_hello.identity,
-        transcript_hash=th,
         signature=gateway_signature,
     )
-    print(f"[*] Node verified Gateway RSA-PSS signature")
 
     gateway_keys = gateway.derive_session_keys(
         node_hello.dh_public_key,
-        th,
     )
-    print(f"[*] Gateway derived session keys")
-
     node_keys = node.derive_session_keys(
         gateway_hello.dh_public_key,
-        th,
     )
-    print(f"[*] Node derived session keys")
 
     gateway_session = Session(
         session_id=gateway_keys.session_id,
@@ -390,7 +411,6 @@ def main():
     print(f"[*] Initialized Gateway and Node")
 
     gateway_session, node_session = handshake(gateway, node)
-
 
     print("")
 
