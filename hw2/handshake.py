@@ -22,6 +22,32 @@ NODE_IDENTITY = "node"
 NODE_ROLE = "node"
 
 
+
+@dataclass(frozen=True)
+class SessionKeys:
+    g2n_enc: bytes
+    g2n_mac: bytes
+    n2g_enc: bytes
+    n2g_mac: bytes
+    session_id: bytes
+
+
+@dataclass
+class Session:
+    session_id: bytes
+    send_enc_key: bytes
+    send_mac_key: bytes
+    recv_enc_key: bytes
+    recv_mac_key: bytes
+
+
+@dataclass(frozen=True)
+class Hello:
+    identity: str
+    dh_public_key: dh.DHPublicKey
+    nonce: bytes
+
+
 def load_dh_parameters(path: Path) -> dh.DHParameters:
     """
     Load the finite-field DH parameters from the PEM group file.
@@ -70,8 +96,8 @@ def encode_dh_public(public_key: dh.DHPublicKey) -> bytes:
 def build_transcript(
     gateway_identity: str,
     node_identity: str,
-    gateway_dh_pub_key: bytes,
-    node_dh_pub_key: bytes,
+    gateway_dh_pub_key: dh.DHPublicKey,
+    node_dh_pub_key: dh.DHPublicKey,
     gateway_nonce: bytes,
     node_nonce: bytes
 ) -> bytes:
@@ -130,31 +156,6 @@ def kdf(z: bytes, transcript_hash: bytes) -> SessionKeys:
     )
 
 
-@dataclass(frozen=True)
-class SessionKeys:
-    g2n_enc: bytes
-    g2n_mac: bytes
-    n2g_enc: bytes
-    n2g_mac: bytes
-    session_id: bytes
-
-
-@dataclass
-class Session:
-    session_id: bytes
-    send_enc_key: bytes
-    send_mac_key: bytes
-    recv_enc_key: bytes
-    recv_mac_key: bytes
-
-
-@dataclass(frozen=True)
-class Hello:
-    identity: str
-    dh_public_key: dh.DHPublicKey
-    nonce: bytes
-
-
 class Party:
     def __init__(
         self,
@@ -188,8 +189,6 @@ class Party:
         self.dh_private_key = self.dh_parameters.generate_private_key()
         self.dh_public_key = self.dh_private_key.public_key()
         self.nonce = os.urandom(16)
-
-        print(f"[*] Sending {self.identity} hello")
 
         return Hello(
             identity=self.identity,
@@ -271,7 +270,10 @@ def handshake(gateway: Party, node: Party) -> tuple[Session, Session]:
     print(f"{'=' * 60}")
 
     gateway_hello = gateway.hello()
+    print(f"[*] Gateway generated fresh DH key pair and 16-byte nonce")
+
     node_hello = node.hello()
+    print(f"[*] Node generated fresh DH key pair and 16-byte nonce")
 
     transcript = build_transcript(
         gateway_hello.identity,
@@ -284,32 +286,39 @@ def handshake(gateway: Party, node: Party) -> tuple[Session, Session]:
 
     th = hashlib.sha256(transcript).digest()
 
-    print(f"[*] Constructed transcript and computed transcript hash (th): {th.hex()}")
+    print(f"[*] Constructed transcript and computed transcript hash")
     
     gateway_signature = gateway.sign(transcript_hash=th)
+    print(f"[*] Gateway signed transcript hash")
+
     node_signature = node.sign(transcript_hash=th)
+    print(f"[*] Node signed transcript hash")
 
     gateway.verify_signature(
-        peer_identity=node.identity,
+        peer_identity=node_hello.identity,
         transcript_hash=th,
         signature=node_signature,
     )
+    print(f"[*] Gateway verified Gateway RSA-PSS signature")
 
     node.verify_signature(
-        peer_identity=gateway.identity,
+        peer_identity=gateway_hello.identity,
         transcript_hash=th,
         signature=gateway_signature,
     )
+    print(f"[*] Node verified Gateway RSA-PSS signature")
 
     gateway_keys = gateway.derive_session_keys(
         node_hello.dh_public_key,
         th,
     )
+    print(f"[*] Gateway derived session keys")
 
     node_keys = node.derive_session_keys(
         gateway_hello.dh_public_key,
         th,
     )
+    print(f"[*] Node derived session keys")
 
     gateway_session = Session(
         session_id=gateway_keys.session_id,
@@ -327,7 +336,21 @@ def handshake(gateway: Party, node: Party) -> tuple[Session, Session]:
         recv_mac_key=node_keys.g2n_mac
     )
 
-    print(f"[*] Sessions established")
+    assert gateway_keys.session_id == node_keys.session_id
+
+    print(f"[*] Session IDs match: {node_keys.session_id.hex()}")
+
+    assert gateway_session.send_enc_key == node_session.recv_enc_key
+    assert gateway_session.send_mac_key == node_session.recv_mac_key
+
+    print(f"[*] Gateway send keys match Node receive keys")
+
+    assert node_session.send_enc_key == gateway_session.recv_enc_key
+    assert node_session.send_mac_key == gateway_session.recv_mac_key
+
+    print(f"[*] Node send keys match Gateway receive keys")
+
+    print(f"[*] Sessions established successfully")
 
     return gateway_session, node_session
 
@@ -340,7 +363,7 @@ def main():
     gateway_signing_key = generate_rsa_signing_key()
     node_signing_key = generate_rsa_signing_key()
 
-    print(f"[*] Generated RSA signing keys for Gateway and Node")
+    print(f"[*] Generated long-term RSA signing keys for Gateway and Node")
 
     gateway = Party(
         identity=GATEWAY_IDENTITY,
@@ -368,7 +391,6 @@ def main():
 
     gateway_session, node_session = handshake(gateway, node)
 
-    
 
     print("")
 
