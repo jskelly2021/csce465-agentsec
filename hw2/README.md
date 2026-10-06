@@ -52,6 +52,10 @@ Run `secure_record.py` experiment.
 python secure_record.py
 ```
 
-## Run Tests
+## Task 4: Run Tests
 
-TODO
+Run automated tests.
+
+```sh
+python -m pytest
+```
