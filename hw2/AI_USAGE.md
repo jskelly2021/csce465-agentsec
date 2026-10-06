@@ -71,3 +71,26 @@ I ran the handshake in the course VM and checked that both parties construct the
 
 **One error, limitation, or rejected suggestion:**
 I initially thought Task 2 required reimplementing the Diffie–Hellman setup itself. The AI clarified that the maintained cryptography library should perform the DH arithmetic and that my responsibility is to implement the authenticated handshake protocol around it, including the transcript, signatures, identity checks, and key derivation.
+
+## Task 3 — Encrypt-then-MAC Secure Record Layer
+
+**Tool/model and date:**
+ChatGPT, GPT-5.6 Sol, Oct 6
+
+**Purpose:**
+Break down the Task 3 requirements, plan the structure of the secure record layer, and understand how to implement `seal()` and `open_record()` using the session keys established during Task 2.
+
+**AI Conversation Log files:**
+ai_logs/task3_secure_record_conversation.md
+
+**What I used:**
+The breakdown of the required record format, guidance on storing send and receive sequence numbers and directions in each session, examples of AES-256-CTR encryption and HMAC-SHA-256 authentication, guidance on parsing and validating records in `open_record()`, and debugging print statements for inspecting record construction.
+
+**What I changed:**
+I adapted the examples to my existing `Session` structure and `handshake.py` implementation. I added send and receive directions and sequence numbers directly to each session, organized the record-processing logic into helper functions, and wrote my own `secure_record.py` implementation around the established session keys.
+
+**How I tested it:**
+I manually established Gateway and Node sessions using the Task 2 handshake, sealed a plaintext message using the Gateway session, opened it using the Node session, and checked the record fields, ciphertext, HMAC, sequence numbers, and recovered plaintext through debug output. Additional adversarial behavior will be tested with automated tests in Task 4.
+
+**One error, limitation, or rejected suggestion:**
+The AI initially suggested creating a separate `RecordLayer` object to store sequence numbers and directions. I instead kept this state directly in the existing `Session` object because each endpoint already has its own session containing separate send and receive keys, making the additional layer unnecessary for my implementation.

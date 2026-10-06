@@ -8,7 +8,6 @@ from handshake import (
     GROUP_ID, GROUP_FILE,
     GATEWAY_IDENTITY, GATEWAY_ROLE,
     NODE_IDENTITY, NODE_ROLE,
-    GATEWAY_TO_NODE, NODE_TO_GATEWAY,
     load_dh_parameters,
     generate_rsa_signing_key,
     Party, Session,
@@ -22,7 +21,7 @@ IV_SIZE = 16
 
 HEADER_STRUCT = struct.Struct(">BBQBI")
 HEADER_SIZE = HEADER_STRUCT.size
-
+MIN_RECORD_SIZE = HEADER_SIZE + IV_SIZE + TAG_SIZE
 
 class RecordError(Exception):
     pass
@@ -40,7 +39,7 @@ class DirectionError(RecordError):
     pass
 
 
-def parse_header(record: bytes, ciphertext_length: int) -> tuple[bytes, bytes]:
+def parse_header(record: bytes, ciphertext_length: int) -> tuple[bytes, bytes, bytes]:
     iv_start = HEADER_SIZE
     iv_end = iv_start + IV_SIZE
 
@@ -106,7 +105,7 @@ def decrypt_ciphertext(session: Session, iv: bytes, ciphertext: bytes) -> bytes:
 def open_record(
     session: Session,
     record: bytes,
-) -> tuple[bytes, bytes]:
+) -> tuple[int, bytes]:
     """
     Verify and decrypt a record.
 
@@ -116,7 +115,13 @@ def open_record(
     """
     print(f"\n{'=' * 60}")
     print("OPENING RECORD")
+    print(f"{'-' * 60}")
+    print(f"Received record length: {len(record)} bytes")
+    print(f"Expected receive sequence: {session.recv_sequence}")
     print(f"{'=' * 60}")
+
+    if len(record) < MIN_RECORD_SIZE:
+        raise RecordError("Malformed record")
 
     header = record[:HEADER_SIZE]
 
@@ -128,9 +133,39 @@ def open_record(
         ciphertext_length,
     ) = HEADER_STRUCT.unpack(header)
 
-    iv, ciphertext, tag = parse_header(record, ciphertext_length)
+    print(f"[*] Parsed header")
+    print(f"    Version: {version}")
+    print(f"    Direction: {direction}")
+    print(f"    Sequence: {sequence}")
+    print(f"    Message type: {message_type}")
+    print(f"    Ciphertext length: {ciphertext_length} bytes")
 
     validate_record(record, ciphertext_length)
+
+    if version != VERSION:
+        raise RecordError("Unsupported version")
+
+    print("[+] Protocol version valid")
+
+    if direction != session.recv_direction:
+        raise DirectionError("Wrong record direction")
+
+    print("[+] Record direction valid")
+
+    if sequence != session.recv_sequence:
+        raise SequenceError(f"Expected sequence {session.recv_sequence}, got {sequence}")
+
+    print("[+] Sequence number valid")
+
+    iv, ciphertext, tag = parse_header(record, ciphertext_length)
+
+    expected_iv = session.session_id + sequence.to_bytes(8, "big")
+
+    if iv != expected_iv:
+        raise RecordError("Invalid IV")
+
+    print("[+] IV valid")
+
     verify_hmac(
         session=session,
         header=header,
@@ -139,23 +174,19 @@ def open_record(
         tag=tag
     )
 
-    if version != VERSION:
-        raise RecordError("Unsupported version")
-
-    if direction != session.recv_direction:
-        raise DirectionError("Wrong record direction")
-
-    if sequence != session.recv_sequence:
-        raise SequenceError(f"Expected sequence {session.recv_sequence}, got {sequence}")
-
-    expected_iv = session.session_id + sequence.to_bytes(8, "big")
-
-    if iv != expected_iv:
-        raise RecordError("Invalid IV")
+    print("[+] HMAC verified successfully")
 
     plaintext = decrypt_ciphertext(session, iv, ciphertext)
 
+    old_sequence = session.recv_sequence
     session.recv_sequence += 1
+
+    print(
+        f"[*] Receive sequence incremented: "
+        f"{old_sequence} -> {session.recv_sequence}"
+    )
+
+    print("[+] Record opened successfully")
 
     return message_type, plaintext
 
@@ -192,6 +223,13 @@ def seal(
         len(plaintext),
     )
 
+    print(f"[*] Constructed header")
+    print(f"    Version: {VERSION}")
+    print(f"    Direction: {session.send_direction}")
+    print(f"    Sequence: {sequence}")
+    print(f"    Message type: {message_type}")
+    print(f"    Ciphertext length: {len(plaintext)} bytes")
+
     cipher = Cipher(
         algorithms.AES(session.send_enc_key),
         modes.CTR(iv),
@@ -213,18 +251,13 @@ def seal(
 
     record = header + iv + ciphertext + tag
 
-    print(f"[*] Session ID: {session.session_id.hex()}")
-    print(f"[*] IV: {iv.hex()}")
-    print(f"[*] IV length: {len(iv)} bytes")
-
-    print(f"[*] Header: {header.hex()}")
     print(f"[*] Header length: {len(header)} bytes")
+    print(f"[*] IV length: {len(iv)} bytes")
 
     print(f"[*] Ciphertext: {ciphertext.hex()}")
     print(f"[*] Ciphertext length: {len(ciphertext)} bytes")
 
     print(f"[*] MAC input length: {len(header + iv + ciphertext)} bytes")
-    print(f"[*] HMAC tag: {tag.hex()}")
     print(f"[*] Tag length: {len(tag)} bytes")
 
     print(f"[*] Total record length: {len(record)} bytes")
@@ -281,9 +314,6 @@ def main():
 
     record = seal(gateway_session, message, 1)
     message_type, plaintext = open_record(node_session, record)
-
-    print(message.decode())
-    print(plaintext.decode())
 
     print("")
 
