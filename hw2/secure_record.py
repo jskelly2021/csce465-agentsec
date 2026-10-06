@@ -27,6 +27,9 @@ def open_record(
     session: Session,
     record: bytes,
 ) -> tuple[bytes, bytes]:
+    """
+    Verify and decrypt a record. Return the decrypted plaintext and messge type.
+    """
     pass
 
 
@@ -35,7 +38,78 @@ def seal(
     plaintext: bytes,
     message_type: int,
 ) -> bytes:
-    pass
+    """
+    Encrypt a plaintext record. Return the encrypted record.
+    """
+    sequence = session.send_sequence
+
+    print(f"\n{'=' * 60}")
+    print("SEALING RECORD")
+    print(f"{'-' * 60}")
+    print(f"Plaintext: {plaintext!r}")
+    print(f"Plaintext length: {len(plaintext)} bytes")
+    print(f"Message type: {message_type}")
+    print(f"Send sequence: {sequence}")
+    print(f"{'=' * 60}")
+
+
+    iv = session.session_id + sequence.to_bytes(8, 'big')
+
+    header = HEADER_STRUCT.pack(
+        VERSION,
+        session.send_direction,
+        sequence,
+        message_type,
+        len(plaintext),
+    )
+
+    cipher = Cipher(
+        algorithms.AES(session.send_enc_key),
+        modes.CTR(iv),
+    )
+
+    encryptor = cipher.encryptor()
+
+    ciphertext = (
+        encryptor.update(plaintext)
+        + encryptor.finalize()
+    )
+
+    mac = hmac.HMAC(
+        session.send_mac_key,
+        hashes.SHA256(),
+    )
+    mac.update(header + iv + ciphertext)
+    tag = mac.finalize()
+
+    record = header + iv + ciphertext + tag
+
+    print(f"[*] Session ID: {session.session_id.hex()}")
+    print(f"[*] IV: {iv.hex()}")
+    print(f"[*] IV length: {len(iv)} bytes")
+
+    print(f"[*] Header: {header.hex()}")
+    print(f"[*] Header length: {len(header)} bytes")
+
+    print(f"[*] Ciphertext: {ciphertext.hex()}")
+    print(f"[*] Ciphertext length: {len(ciphertext)} bytes")
+
+    print(f"[*] MAC input length: {len(header + iv + ciphertext)} bytes")
+    print(f"[*] HMAC tag: {tag.hex()}")
+    print(f"[*] Tag length: {len(tag)} bytes")
+
+    print(f"[*] Total record length: {len(record)} bytes")
+
+    session.send_sequence += 1
+
+    print(
+        f"[*] Send sequence incremented: "
+        f"{sequence} -> {session.send_sequence}"
+    )
+
+    print("[+] Record sealed successfully")
+
+    return record
 
 
 def main():
@@ -73,6 +147,9 @@ def main():
     print(f"[*] Initialized Gateway and Node")
 
     gateway_session, node_session = handshake(gateway, node)
+
+    record = seal(gateway_session, b'Hello, Node', 1)
+    record = seal(gateway_session, b'Hello, Node, again', 1)
 
     print("")
 
