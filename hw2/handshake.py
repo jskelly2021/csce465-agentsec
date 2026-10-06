@@ -1,6 +1,7 @@
 import os
 import hashlib
 import struct
+import hmac
 
 from dataclasses import dataclass
 from pathlib import Path
@@ -13,7 +14,7 @@ PROTOCOL_LABEL = b"CSCE465-HS-v2"
 GROUP_ID = b"ffdhe3072"
 GROUP_FILE = Path("ffdhe3072.pem")
 
-DH_PUBLIC_SIZE = 384
+DH_VALUE_SIZE = 384
 
 GATEWAY_IDENTITY = "gateway"
 GATEWAY_ROLE = "gateway"
@@ -61,7 +62,7 @@ def encode_dh_public(public_key: dh.DHPublicKey) -> bytes:
     y = public_key.public_numbers().y
 
     return y.to_bytes(
-        DH_PUBLIC_SIZE,
+        DH_VALUE_SIZE,
         byteorder="big",
     )
 
@@ -92,15 +93,62 @@ def build_transcript(
     return b"".join(encode_field(field) for field in fields)
 
 
+def kdf(z: bytes, transcript_hash: bytes) -> SessionKeys:
+    """
+    Apply the KDF.
+    """
+    if len(z) != DH_VALUE_SIZE:
+        raise ValueError("Z must be exactly 384 bytes")
+
+    # K_master = SHA-256("CSCE465-KDF-v1" || Z || TH)
+    k_master = hashlib.sha256(
+        b"CSCE465-KDF-v1"
+        + z
+        + transcript_hash
+    ).digest()
+
+    def derive(label: bytes) -> bytes:
+        return hmac.new(
+            k_master,
+            label + transcript_hash,
+            hashlib.sha256,
+        ).digest()
+
+    k_g2n_enc = derive(b"gateway-to-node encryption")
+    k_g2n_mac = derive(b"gateway-to-node MAC")
+    k_n2g_enc = derive(b"node-to-gateway encryption")
+    k_n2g_mac = derive(b"node-to-gateway MAC")
+
+    session_id = derive(b"session identifier")[:8]
+
+    return SessionKeys(
+        g2n_enc=k_g2n_enc,
+        g2n_mac=k_g2n_mac,
+        n2g_enc=k_n2g_enc,
+        n2g_mac=k_n2g_mac,
+        session_id=session_id,
+    )
+
+
+@dataclass(frozen=True)
+class SessionKeys:
+    g2n_enc: bytes
+    g2n_mac: bytes
+    n2g_enc: bytes
+    n2g_mac: bytes
+    session_id: bytes
+
+
 @dataclass
 class Session:
-    session_id: bytes = None
-    peer_identity: str = None
-    transcript: bytes = None
-    transcript_hash: bytes = None
+    session_id: bytes
+    send_enc_key: bytes
+    send_mac_key: bytes
+    recv_enc_key: bytes
+    recv_mac_key: bytes
 
 
-@dataclass
+@dataclass(frozen=True)
 class Hello:
     identity: str
     dh_public_key: dh.DHPublicKey
@@ -189,17 +237,29 @@ class Party:
             hashes.SHA256(),
         )
 
-    def compute_shared_secret(self, peer_dh_public_key: dh.DHPublicKey) -> None:
-        """
-        Compute the shared secret using the peer's DH public key.
-        """
-        pass
 
+    def derive_session_keys(
+        self,
+        peer_dh_public_key: dh.DHPublicKey,
+        transcript_hash: bytes,
+    ) -> SessionKeys:
+        """
+        Compute the DH shared secret and derive the session keys.
+        """
 
-def derive_session_keys(self, shared_secret: bytes):
-    """
-    Derive session keys from the shared secret.
-    """
+        if len(transcript_hash) != 32:
+            raise ValueError("Transcript hash must be 32 bytes")
+
+        shared_secret = self.dh_private_key.exchange(peer_dh_public_key)
+
+        if len(shared_secret) > DH_VALUE_SIZE:
+            raise ValueError("DH shared secret is larger than expected")
+
+        z = shared_secret.rjust(DH_VALUE_SIZE, b"\x00")
+
+        keys = kdf(z, transcript_hash)
+
+        return keys
 
 
 def handshake(gateway: Party, node: Party) -> tuple[Session, Session]:
@@ -241,11 +301,33 @@ def handshake(gateway: Party, node: Party) -> tuple[Session, Session]:
         signature=gateway_signature,
     )
 
-    gateway.compute_shared_secret(node_hello.dh_public_key)
-    node.compute_shared_secret(gateway_hello.dh_public_key)
+    gateway_keys = gateway.derive_session_keys(
+        node_hello.dh_public_key,
+        th,
+    )
 
-    gateway_session = Session()
-    node_session = Session()
+    node_keys = node.derive_session_keys(
+        gateway_hello.dh_public_key,
+        th,
+    )
+
+    gateway_session = Session(
+        session_id=gateway_keys.session_id,
+        send_enc_key=gateway_keys.g2n_enc,
+        send_mac_key=gateway_keys.g2n_mac,
+        recv_enc_key=gateway_keys.n2g_enc,
+        recv_mac_key=gateway_keys.n2g_mac
+    )
+
+    node_session = Session(
+        session_id=node_keys.session_id,
+        send_enc_key=node_keys.n2g_enc,
+        send_mac_key=node_keys.n2g_mac,
+        recv_enc_key=node_keys.g2n_enc,
+        recv_mac_key=node_keys.g2n_mac
+    )
+
+    print(f"[*] Sessions established")
 
     return gateway_session, node_session
 
@@ -285,6 +367,8 @@ def main():
     print(f"[*] Initialized Gateway and Node")
 
     gateway_session, node_session = handshake(gateway, node)
+
+    
 
     print("")
 
