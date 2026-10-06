@@ -44,6 +44,14 @@ Run `handshake.py` experiment.
 python handshake.py
 ```
 
+## Task 3
+
+Run `secure_record.py` experiment.
+
+```sh
+python secure_record.py
+```
+
 ## Run Tests
 
 TODO

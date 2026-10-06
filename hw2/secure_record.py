@@ -1,15 +1,41 @@
+import struct
+
+from cryptography.hazmat.primitives import hashes, hmac
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 from handshake import (
-    PROTOCOL_LABEL,
     GROUP_ID, GROUP_FILE,
-    DH_VALUE_SIZE,
     GATEWAY_IDENTITY, GATEWAY_ROLE,
     NODE_IDENTITY, NODE_ROLE,
+    GATEWAY_TO_NODE, NODE_TO_GATEWAY,
     load_dh_parameters,
     generate_rsa_signing_key,
-    Party,
+    Party, Session,
     handshake,
 )
+
+
+VERSION = 1
+TAG_SIZE = 32
+IV_SIZE = 16
+
+HEADER_STRUCT = struct.Struct(">BBQBI")
+HEADER_SIZE = HEADER_STRUCT.size
+
+
+def open_record(
+    session: Session,
+    record: bytes,
+) -> tuple[bytes, bytes]:
+    pass
+
+
+def seal(
+    session: Session,
+    plaintext: bytes,
+    message_type: int,
+) -> bytes:
+    pass
 
 
 def main():

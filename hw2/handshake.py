@@ -21,6 +21,9 @@ GATEWAY_ROLE = "gateway"
 NODE_IDENTITY = "node"
 NODE_ROLE = "node"
 
+GATEWAY_TO_NODE = 1
+NODE_TO_GATEWAY = 2
+
 
 @dataclass(frozen=True)
 class SessionKeys:
@@ -38,6 +41,10 @@ class Session:
     send_mac_key: bytes
     recv_enc_key: bytes
     recv_mac_key: bytes
+    send_direction: int
+    recv_direction: int
+    send_sequence: int = 0
+    recv_sequence: int = 0
 
 
 @dataclass(frozen=True)
@@ -346,7 +353,9 @@ def handshake(gateway: Party, node: Party) -> tuple[Session, Session]:
         send_enc_key=gateway_keys.g2n_enc,
         send_mac_key=gateway_keys.g2n_mac,
         recv_enc_key=gateway_keys.n2g_enc,
-        recv_mac_key=gateway_keys.n2g_mac
+        recv_mac_key=gateway_keys.n2g_mac,
+        send_direction=GATEWAY_TO_NODE,
+        recv_direction=NODE_TO_GATEWAY,
     )
 
     node_session = Session(
@@ -354,7 +363,9 @@ def handshake(gateway: Party, node: Party) -> tuple[Session, Session]:
         send_enc_key=node_keys.n2g_enc,
         send_mac_key=node_keys.n2g_mac,
         recv_enc_key=node_keys.g2n_enc,
-        recv_mac_key=node_keys.g2n_mac
+        recv_mac_key=node_keys.g2n_mac,
+        send_direction=NODE_TO_GATEWAY,
+        recv_direction=GATEWAY_TO_NODE,
     )
 
     assert gateway_keys.session_id == node_keys.session_id
