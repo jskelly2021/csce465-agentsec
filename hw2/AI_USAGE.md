@@ -81,7 +81,9 @@ ChatGPT, GPT-5.6 Sol, Oct 6
 Break down the Task 3 requirements, plan the structure of the secure record layer, and understand how to implement `seal()` and `open_record()` using the session keys established during Task 2.
 
 **AI Conversation Log files:**
-ai_logs/task3_secure_record_conversation.md
+ai_logs/task3_plan.md
+ai_logs/task3_bug_review.md
+ai_logs/task3_report_structure.md
 
 **What I used:**
 The breakdown of the required record format, guidance on storing send and receive sequence numbers and directions in each session, examples of AES-256-CTR encryption and HMAC-SHA-256 authentication, guidance on parsing and validating records in `open_record()`, and debugging print statements for inspecting record construction.
@@ -94,3 +96,27 @@ I manually established Gateway and Node sessions using the Task 2 handshake, sea
 
 **One error, limitation, or rejected suggestion:**
 The AI initially suggested creating a separate `RecordLayer` object to store sequence numbers and directions. I instead kept this state directly in the existing `Session` object because each endpoint already has its own session containing separate send and receive keys, making the additional layer unnecessary for my implementation.
+
+## Task 4 — Adversarial Tests and Security Note
+
+**Tool/model and date:**  
+ChatGPT, GPT-5.6 Sol, Oct 6
+
+**Purpose:**  
+Break down the Task 4 requirements into actionable steps, understand the required adversarial tests, determine the expected safe failure for each attack, and plan the required security note.
+
+**AI Conversation Log files:**  
+ai_logs/task4_plan.md
+ai_logs/task4_pytest_explaination.md
+
+**What I used:**  
+The suggested pytest structure and fixtures, examples for testing valid bidirectional communication, modified ciphertext, modified authenticated headers, replayed records, reflected records, and an incorrect RSA public key. I also used the explanation of what constitutes a specific safe failure and the outline of topics required for the security note.
+
+**What I changed:**  
+I adapted the example tests to my existing `handshake.py` and `secure_record.py` implementation, including my session structure, exception classes, record format, and ordering of validation checks.
+
+**How I tested it:**  
+I will run the automated tests with `pytest -v` in the course VM and verify that valid records are accepted while each adversarial case raises the expected specific exception without releasing plaintext or establishing an invalid session.
+
+**One error, limitation, or rejected suggestion:**  
+The AI initially suggested that a reflected record should raise `AuthenticationError` because it assumed HMAC verification occurred before the direction check. My current `open_record()` implementation checks the record direction before verifying the HMAC, so a reflected record should instead fail with `DirectionError`. I adjusted the expected test result to match my implementation.
