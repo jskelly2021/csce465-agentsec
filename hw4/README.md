@@ -46,9 +46,66 @@ suricata -V
 
 ## Task 1: Build the local network lab
 
-### Setup
+### Setup the docker environment
 
+Build and run the containers.
 
+```sh
+docker compose up -d --build
+```
+
+Confirm the containers are running.
+
+```sh
+docker compose ps
+```
+
+Confirm the network name.
+
+```sh
+docker network ls
+```
+
+Inspect the network. Use the name of the network discovered in the previous step.
+
+```sh
+docker network inspect hw4_hw4net
+```
+
+### Run the experiment
+
+Verify the secret has not been received by the c2.
+
+```sh
+docker compose exec mock-c2 ls -l /data/received.bin
+```
+
+If the secret already exists
+
+```sh
+docker compose exec mock-c2 rm -f /data/received.bin
+```
+
+Run the exfiltration
+
+```sh
+docker compose exec agent-node sh /app/mock_skill.sh exfiltrate-course-file
+```
+
+Check if exfiltration was successful.
+
+```sh
+docker compose exec mock-c2 ls -l /data/received.bin
+```
+
+### Verify exfiltration
+
+Verify the contents of agent-node's secret and mock-c2's received secret.
+
+```sh
+docker compose exec agent-node sha256sum /app/fake_secrets.txt
+docker compose exec mock-c2 sha256sum /data/received.bin
+```
 
 ## Task 2: Scan, capture, and reconstruct the event
 
