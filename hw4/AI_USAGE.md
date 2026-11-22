@@ -31,3 +31,19 @@
 **How I tested it:** Verified TCP 9009 with Nmap/netcat and analyzed the HTTP POST using TShark.
 
 **One error, limitation, or rejected suggestion:** Background socat listener failed to remain accessible; switched to foreground execution.
+
+## Entry 3 - Task 3 Understanding and Guidance
+
+**Tool/model and date:** ChatGPT (GPT-6), November 22, 2026
+
+**Purpose:** Understand Task 3 requirements, iptables, and Docker firewall configuration.
+
+**AI Conversation Log files:** `task3_conversation.md`
+
+**What I used:** Firewall breakdown, iptables explanations, and example scripts.
+
+**What I changed:** Adapted examples to my lab setup 
+
+**How I tested it:** Run the five required firewall verification tests.
+
+**One error, limitation, or rejected suggestion:** Firewall rules may not filter bridged traffic without `br_netfilter`.

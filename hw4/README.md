@@ -82,8 +82,8 @@ Verify the secret has not been received by the c2.
 docker compose exec mock-c2 ls -l /data/received.bin
 ```
 
-If the secret already exists
-
+If the sec
+ret already exists
 ```sh
 docker compose exec mock-c2 rm -f /data/received.bin
 ```
@@ -205,8 +205,102 @@ docker compose exec agent-node curl http://172.30.0.40:8000/benign.html
 
 ## Task 3: Default-deny egress for the agent container
 
+Ensure the `firewall.sh` and `firewall-reset.sh` are executable. 
 
+### Apply the firewall
+
+Run the firewall script.
+
+```sh
+sudo ./firewall.sh
+```
+
+Inspect the rules.
+
+```sh
+sudo iptables -L HW4-AGENT -n -v
+```
+
+### Run the Test
+
+#### 1. Fetch benign page from web-lab
+
+From agent-node, fetch the benign page
+
+```sh
+docker compose exec agent-node curl -i http://172.30.0.40:8000/benign.html
+```
+
+#### 2. Send fake secret to mock-c2 
+
+Remove any recieved secret on mock-c2.
+
+```sh
+docker compose exec mock-c2 rm -f /data/received.bin
+```
+
+From agent-node, trigger secret exfiltration with the mock skill
+
+```sh
+docker compose exec agent-node ./mock_skill.sh exfiltrate-course-file
+```
+
+Confirm the exfiltration was blocked:
+
+```sh
+docker compose exec mock-c2 ls -l /data/received.bin
+```
+
+#### 3. Connect to another unapproved container port
+
+From agent-node, attempt to connect to an unnaproved port on web-lab
+
+```sh
+docker compose exec agent-node curl --max-time 5 http://172.30.0.40:8080/
+```
+
+#### 4. Existing response traffic
+
+Ensure the TCP listener is running on agent-lab.
+
+```sh
+docker compose exec agent-node ./mock_skill.sh
+```
+
+In a new tab from the host VM:
+
+```sh
+nc 172.30.0.10 9009
+```
+
+#### 5. Unrelated Docker traffic
+
+From web-lab:
+
+```sh
+docker compose exec web-lab curl -i -X POST http://172.30.0.66:8080/
+```
 
 ## Task 4: Three Suricata rules
 
+### Setup
 
+Ensure `hw4-malicious.pcap` and 'hw4-clean.pcap` have exist. If not, follow Task 2 to create them.
+
+```sh
+mkdir -p suricata-malicious suricata-clean
+```
+
+### Run Suricata
+
+```sh
+suricata -k none -r hw4-malicious.pcap -S local.rules -l suricata-malicious
+suricata -k none -r hw4-clean.pcap -S local.rules -l suricata-clean
+```
+
+Inspect the generated alerts
+
+```sh
+cat suricata-malicious/fast.log
+cat suricata-clean/fast.log
+```
