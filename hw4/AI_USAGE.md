@@ -47,3 +47,19 @@
 **How I tested it:** Run the five required firewall verification tests.
 
 **One error, limitation, or rejected suggestion:** Firewall rules may not filter bridged traffic without `br_netfilter`.
+
+## Entry 4 - Task 4 Guidance and Rule Creation
+
+**Tool/model and date:** ChatGPT (GPT-6), November 22, 2026
+
+**Purpose:** Understand and implement Suricata detection rules for Task 4.
+
+**AI Conversation Log files:** `task4_conversation.md`
+
+**What I used:** Three Suricata rules, keyword explanations, and testing commands.
+
+**What I changed:** Customized the rules for my lab, including my unique fake token.
+
+**How I tested it:** Suricata syntax validation and malicious/clean PCAP analysis. Results to be verified.
+
+**One error, limitation, or rejected suggestion:** HTTP body detection cannot inspect encrypted content without decryption.
