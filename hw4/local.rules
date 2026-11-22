@@ -1,5 +1,25 @@
-alert http 172.30.0.10 any -> 172.30.0.66 8080 (msg:"HW4 Fake Secret Exfiltration"; flow:established,to_server; http.request_body; content:"YOUR_ACTUAL_FAKE_TOKEN"; sid:1000001; rev:1;)
+alert http 172.30.0.10 any -> 172.30.0.66 8080 (
+    msg:"HW4 Fake Secret Exfiltration";
+    flow:established,to_server;
+    http.request_body;
+    content:"CSCE465-FAKE-TOKEN-b1ad31830b5e7984";
+    sid:1000001;
+    rev:1;
+)
 
-alert http 172.30.0.40 8000 -> 172.30.0.10 any (msg:"HW4 Indirect Injection Marker"; flow:established,to_client; http.response_body; content:"CSCE465-COURSE-MARKER"; sid:1000002; rev:1;)
+alert http 172.30.0.40 8000 -> 172.30.0.10 any (
+    msg:"HW4 Indirect Injection Marker";
+    flow:established,to_client;
+    http.response_body;
+    content:"CSCE465-COURSE-MARKER";
+    sid:1000002;
+    rev:1;
+)
 
-alert tcp 172.30.0.10 any -> 172.30.0.66 8080 (msg:"Mock C2 Connection"; flow:to_server; flags:S; sid:1000003; rev:1;)
+alert tcp 172.30.0.10 any -> 172.30.0.66 8080 (
+    msg:"Mock C2 Connection";
+    flow:to_server;
+    flags:S;
+    sid:1000003;
+    rev:1;
+)
