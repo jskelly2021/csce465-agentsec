@@ -2,6 +2,8 @@
 
 ## Setup
 
+All commands should be executed from the HW4 directory.
+
 Install the the required software in the Ubuntu VM
 
 ### Docker Engine and Compose
@@ -109,7 +111,97 @@ docker compose exec mock-c2 sha256sum /data/received.bin
 
 ## Task 2: Scan, capture, and reconstruct the event
 
+Verify all 3 containers are running.
 
+```sh
+docker compose ps
+```
+
+### Nmap Port Scan
+
+Execute the mock skill on agent-node with no arguments to start the TCP listener.
+
+```sh
+docker compose exec agent-node ./mock_skill.sh
+```
+
+In a new terminal on the host VM, use nmap to port scan agent-node.
+
+```sh
+nmap -sT -p 1-10000 172.30.0.10
+```
+
+### Malicious Incident Capture
+
+On the host VM, start a packet capture with tcpdump
+
+```sh
+sudo tcpdump -i br-hw4 -s 0 -w hw4-malicious.pcap 'net 172.30.0.0/24'
+```
+
+In a new terminal, fetch the adversarial page, then trigger the mock skill to exfiltrate the secret. Then end the capture.
+
+```sh
+docker compose exec agent-node curl http://172.30.0.40:8000/adversarial.html
+docker compose exec agent-node ./mock_skill.sh exfiltrate-course-file
+```
+
+### Reconstruction
+
+Extract connection details
+
+```sh
+tshark -r hw4-malicious.pcap \
+  -Y 'http.request' \
+  -T fields \
+  -e ip.src -e tcp.srcport \
+  -e ip.dst -e tcp.dstport \
+  -e http.request.method \
+  -e http.request.uri \
+  -e tcp.stream
+```
+
+Follow the exfiltration TCP stream. Replace `N` with thte TCP stream number.
+
+```sh
+tshark -r hw4-malicious.pcap -q -z follow, tcp, ascii, N
+```
+
+Retrieve the first and last packet timestamps. Replace `N` with thte TCP stream number.
+
+```sh
+tshark -r hw4-malicious.pcap \
+  -Y 'tcp.stream == 1' \
+  -T fields -e frame.time
+```
+
+Extract the POST body.
+
+```sh
+mkdir -p objs
+tshark -r hw4-malicious.pcap -q --export-objects http,objs/
+```
+
+Compute the hash of the POST body
+
+```sh
+ls -l objs/
+sha256sum objs/<POST_BODY_FILENAME>
+```
+
+### Clean Capture
+
+On the host VM, start a packet capture with tcpdump
+
+```sh
+sudo tcpdump -i br-hw4 -s 0 -w hw4-clean.pcap 'net 172.30.0.0/24'
+```
+
+In a new terminal, fetch the benign page, then end the capture.
+
+```sh
+docker compose exec agent-node curl http://172.30.0.40:8000/benign.html
+```
 
 ## Task 3: Default-deny egress for the agent container
 
