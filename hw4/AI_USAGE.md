@@ -63,3 +63,19 @@
 **How I tested it:** Suricata syntax validation and malicious/clean PCAP analysis. Results to be verified.
 
 **One error, limitation, or rejected suggestion:** HTTP body detection cannot inspect encrypted content without decryption.
+
+## Entry 5 - Task 5 Summary Structure
+
+**Tool/model and date:** ChatGPT (GPT-6), November 22, 2026
+
+**Purpose:** Help structure the Task 5 incident summary.
+
+**AI Conversation Log files:** `task5_conversation.md`
+
+**What I used:** Suggested report sections, timeline format, and recommendations.
+
+**What I changed:** Adapted the outline to my incident evidence.
+
+**How I tested it:** Compared the structure against Task 5 requirements.
+
+**One error, limitation, or rejected suggestion:** Example timeline lacked actual packet timestamps.
